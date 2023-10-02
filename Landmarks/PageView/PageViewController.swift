@@ -11,6 +11,7 @@ import UIKit
 struct PageViewController<Page: View>: UIViewControllerRepresentable {
     var pages: [Page]
     @Binding var currentPage: Int
+    @State private var autoSwipeTimer: Timer?
     
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -21,13 +22,33 @@ struct PageViewController<Page: View>: UIViewControllerRepresentable {
             transitionStyle: .scroll, navigationOrientation: .horizontal)
         pageViewController.dataSource = context.coordinator
         pageViewController.delegate = context.coordinator
-        
+        startAutoSwipeTimer(in: pageViewController, context: context)
         return pageViewController
     }
     
     func updateUIViewController(_ pageViewController: UIPageViewController, context: Context) {
         pageViewController.setViewControllers([context.coordinator.controllers[currentPage]], direction: .forward, animated: true)
     }
+    
+    func startAutoSwipeTimer(in pageViewController: UIPageViewController, context: Context) {
+            // Invalidate the existing timer if it exists.
+            autoSwipeTimer?.invalidate()
+
+            autoSwipeTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { timer in
+                DispatchQueue.main.async {
+                    // Create a binding to currentPage
+                    let binding = self.$currentPage
+                    binding.wrappedValue += 1
+
+                    if binding.wrappedValue == self.pages.count {
+                        binding.wrappedValue = 0
+                    }
+
+                    pageViewController.setViewControllers([context.coordinator.controllers[self.currentPage]], direction: .forward, animated: true)
+                }
+            }
+        }
+
     
     class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
         var parent: PageViewController
